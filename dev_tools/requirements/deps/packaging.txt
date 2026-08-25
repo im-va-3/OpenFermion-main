@@ -1,0 +1,13 @@
+# for testing packaging in isolation
+virtualenv
+
+# for creating packages
+build
+setuptools
+wheel
+
+# for uploading packages to pypi
+twine
+
+# for regenerating requirements files
+uv

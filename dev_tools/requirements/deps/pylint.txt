@@ -1,0 +1,5 @@
+pylint~=4.0
+
+-r resource_estimates_runtime.txt
+-r pytest.txt
+

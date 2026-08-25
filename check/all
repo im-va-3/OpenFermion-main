@@ -1,0 +1,147 @@
+#!/usr/bin/env bash
+#
+# Copyright 2025 Google LLC
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     https://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
+# This script is modeled in part on Cirq's check/all script.
+
+declare -r usage="\
+Usage: ${0##*/} [OPTIONS] [BASE_REV]
+
+Runs multiple checks on the code base.
+
+If --apply-changes (or -a) is given, the flag --apply will be passed to
+check/format-incremental to make it apply format changes suggested by the
+formatter.
+
+If --only-changed-files (or -c) is given, most checks will be limited to the
+files that have changed since the BASE_REV version. If BASE_REV is not given,
+the version at the end of the base branch (origin/main) will be used.
+
+By default, this program runs checks in parallel mode. To prevent this, use the
+option --no-parallel (or -p).
+
+You can specify a base git revision to compare against (that is, the revision
+to be used when determining whether a file is considered to have changed). If
+given, the argument BASE_REV is passed on to tests that can use it, such as
+check/pytest-and-incremental-coverage.
+
+If the first argument given on the command line is the option --help or -h,
+this program prints usage information and then exits.
+
+Summary of available options:
+  --apply-changes       Pass the flag --apply to check/format-incremental
+  --no-parallel         Do not pass the parallelism flags to the check programs
+  --only-changed-files  Limit checks to files that have changed since BASE_REV
+  -h or --help          Show this help message and exit"
+
+set -eo pipefail -o errtrace
+shopt -s inherit_errexit
+
+# Get the working directory to the repo root.
+thisdir=$(dirname "${BASH_SOURCE[0]:?}")
+repo_dir=$(git -C "${thisdir}" rev-parse --show-toplevel)
+cd "${repo_dir}"
+
+function error() {
+    echo >&2 "ERROR: ${*}"
+}
+
+# ~~~~ Parse the CLI arguments and gather some data ~~~~
+
+declare -a rev=()
+declare -a apply_arg=()
+declare only_changed=""
+declare no_parallel=""
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -a | --apply-changes | --apply-format-changes)
+            apply_arg=( "--apply" )
+            ;;
+        -c | --only-changed-files)
+            only_changed="true"
+            ;;
+        -h | --help)
+            echo "${usage}"
+            exit 0
+            ;;
+        -p | --no-parallel)
+            no_parallel="true"
+            ;;
+        -*)
+            error "Invalid option '$1'"
+            error "See '$0 --help' for the list of supported options."
+            exit 1
+            ;;
+        *)
+            if ! rev=( "$(git rev-parse --verify --end-of-options "$1^{commit}")" ); then
+                error "No revision '$1'"
+                exit 1
+            fi
+            ;;
+    esac
+    shift
+done
+
+# ~~~~ Run the tests ~~~~
+
+declare -a errors=()
+declare -a pylint_j=()
+declare -a pytest_n=()
+declare -a mypy_n=()
+
+function run() {
+    echo "~~~~ Running $* ~~~~"
+    "$@" || errors+=( "$* failed" )
+}
+
+# Count only the physical cores (usually fewer than logical cores). This leaves
+# some CPU resources for OpenFermion modules that use multiple processes.
+cpus=$(python3 -c 'import psutil; print(psutil.cpu_count(logical=False))')
+
+if [[ -z "${no_parallel}" ]]; then
+    # Pylint & pytest can auto-detect the number of CPUs, but not mypy. To be
+    # consistent, this uses the same explicit number for all of them.
+    pylint_j=("-j" "${cpus}")
+    pytest_n=("-n" "${cpus}")
+    mypy_n=("-n" "${cpus}")
+fi
+
+if [[ -n "${only_changed}" ]]; then
+    run check/format-incremental "${rev[@]}" "${apply_arg[@]}"
+    run check/pylint-changed-files "${pylint_j[@]}" "${rev[@]}"
+else
+    run check/format-incremental "${rev[@]}" "${apply_arg[@]}" --all
+    run check/pylint "${pylint_j[@]}" "${rev[@]}"
+fi
+run check/mypy "${mypy_n[@]}"
+run check/pytest-and-incremental-coverage "${pytest_n[@]}" "${rev[@]}"
+run check/shellcheck
+run check/nbformat
+
+# ~~~~ Summarize the results and exit with a status code ~~~~
+
+declare exit_code=0
+echo
+echo "Done."
+if [[ "${#errors[@]}" == 0 ]]; then
+    echo "All checks passed."
+else
+    error "Some checks failed."
+    printf "  %s\n" "${errors[@]}"
+    exit_code=1
+fi
+
+exit "${exit_code}"
