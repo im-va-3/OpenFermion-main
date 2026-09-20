@@ -21,12 +21,10 @@
   "schema_version": "1.0",
   "snapshot": {
     "category": "05-quantum-computing-and-quantum-physics",
-    "copied_bytes": 73911867,
-    "copied_files": 487,
+    "copied_bytes": 75491907,
+    "copied_files": 523,
     "date": "2026-08-25",
-    "excluded_directories": [
-      "src/openfermion/testing/data"
-    ],
+    "excluded_directories": [],
     "excluded_files": [],
     "folder": "OpenFermion-main",
     "kind": "independent-code-snapshot",
