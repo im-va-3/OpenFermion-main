@@ -55,9 +55,10 @@ def test_prepare_gaussian_state(
     circuit = cirq.Circuit(
         prepare_gaussian_state(qubits, quad_ham, occupied_orbitals, initial_state=initial_state)
     )
+    circuit.append(cirq.I.on_each(*qubits))
     if isinstance(initial_state, list):
         initial_state = sum(1 << (n_qubits - 1 - i) for i in initial_state)
-    state = circuit.final_state_vector(initial_state=initial_state)
+    state = circuit.final_state_vector(initial_state=initial_state, qubit_order=qubits)
 
     # Check that the result is an eigenstate with the correct eigenvalue
     numpy.testing.assert_allclose(quad_ham_sparse.dot(state), energy * state, atol=atol)
@@ -101,10 +102,11 @@ def test_prepare_gaussian_state_with_spin_symmetry(
     circuit = cirq.Circuit(
         prepare_gaussian_state(qubits, quad_ham, occupied_orbitals, initial_state=initial_state)
     )
+    circuit.append(cirq.I.on_each(*qubits))
 
     if isinstance(initial_state, list):
         initial_state = sum(1 << (n_qubits - 1 - i) for i in initial_state)
-    state = circuit.final_state_vector(initial_state=initial_state)
+    state = circuit.final_state_vector(initial_state=initial_state, qubit_order=qubits)
 
     # Check that the result is an eigenstate with the correct eigenvalue
     numpy.testing.assert_allclose(quad_ham_sparse.dot(state), energy * state, atol=atol)
@@ -148,8 +150,9 @@ def test_prepare_slater_determinant(
     circuit = cirq.Circuit(
         prepare_slater_determinant(qubits, slater_determinant_matrix, initial_state=initial_state)
     )
+    circuit.append(cirq.I.on_each(*qubits))
     if isinstance(initial_state, list):
         initial_state = sum(1 << (n_qubits - 1 - i) for i in initial_state)
-    state = circuit.final_state_vector(initial_state=initial_state)
+    state = circuit.final_state_vector(initial_state=initial_state, qubit_order=qubits)
 
     assert cirq.allclose_up_to_global_phase(state, correct_state, atol=atol)
