@@ -210,3 +210,21 @@ Copyright 2017 The OpenFermion Developers.
          src="https://raw.githubusercontent.com/quantumlib/OpenFermion/refs/heads/main/docs/images/quantum-ai-vertical.svg">
   </a>
 </div>
+
+
+## Step-by-step user guide
+
+1. **Install the core package.** Create a Python environment and run <code>python -m pip install openfermion</code>. Install a plugin separately when you need a particular chemistry engine or high-performance simulator.
+2. **Open the introductory example.** Start with [intro_to_openfermion.ipynb](docs/tutorials/intro_to_openfermion.ipynb) in Jupyter or Colab and run its cells in order. If Jupyter is installed locally, open it with <code>jupyter lab docs/tutorials/intro_to_openfermion.ipynb</code>.
+3. **Build the fermionic problem.** Represent creation/annihilation terms with FermionOperator, combine them into a Hamiltonian, and use the documented sparse/operator utilities to inspect or apply it.
+4. **Map to qubits.** Apply a fermion-to-qubit transformation such as Jordan–Wigner, then group/inspect Pauli terms and pass the operator to a compatible circuit framework or simulator plugin.
+5. **Add molecular integrals.** Use the relevant plugin (for example OpenFermion-PySCF) to generate molecular data, construct the electronic Hamiltonian, and repeat the transform/measurement workflow. Keep the plugin and external chemistry package versions compatible.
+6. **Compare and export.** Check particle number, spin, basis, and mapping conventions; export circuits/operators in the format expected by the chosen backend and compare small systems with an exact sparse result.
+
+### Functionality map
+
+- Fermionic, bosonic, and qubit operator data structures; Hamiltonian construction, simplification, normal ordering, and transformations.
+- Electronic-structure data/integral workflows, fermion-to-qubit mappings, sparse operators, circuit compilation/interoperation, and chemistry/simulation plugins.
+- High-performance fermionic evolution and external chemistry backends are optional plugin packages; install only the plugins required for your workflow.
+- Use the local [tutorial notebooks](docs/tutorials/), [online tutorials](https://quantumai.google/openfermion/tutorials/), and the [API reference](https://quantumai.google/reference/python/openfermion/all_symbols) for the full operator and plugin APIs.
+
